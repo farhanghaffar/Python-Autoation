@@ -1,0 +1,77 @@
+name:
+  Sanity Job
+ 
+  # Controls when the workflow will run
+on:
+  # Triggers the workflow every 5 minutes
+  schedule:
+    - cron: "0 0 * * *"
+    #- cron: "*/5 * * * *"
+    
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Set HEADLESS environment variable (headless run)
+      run: echo "HEADLESS=true" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+    - name: Upgrade pip
+      run: |
+        python -m pip install --upgrade pip
+        pip --version
+    
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    # - name: Prepare Allure history # Step to prepare Allure history directory
+    #   run: |
+    #     cd ..
+    #     mkdir -p ${{ vars.ALLURE_RESULTS_PATH }}
+
+    - name: Run Router WebApp Sanity tests
+      #run: behave NavigoPlatform/Features/RouterFeature -t @Sanity -f allure_behave.formatter:AllureFormatter -o allure-results
+      #FYI: behave tags are not working for some unknow reasons. hence need to use below commands and it will run the full feature scenarios.
+      run: |
+        behave NavigoPlatform/Features/RouterFeature/Login.feature -f allure_behave.formatter:AllureFormatter -o allure-results
+        behave NavigoPlatform/Features/RouterFeature/AirRoute.feature -f allure_behave.formatter:AllureFormatter -o allure-results
+        behave NavigoPlatform/Features/RouterFeature/CreateNewFlightSchedule.feature -f allure_behave.formatter:AllureFormatter -o allure-results
+        behave NavigoPlatform/Features/RouterFeature/CreateAirCraft.feature -f allure_behave.formatter:AllureFormatter -o allure-results
+            
+    # - name: Generate allure-results
+    #   uses: actions/upload-artifact@master
+    #   with:
+    #     name: allure-results
+    #     path: Reports
+    #     retention-days: 20
+        
+    - name: Get Allure history
+      uses: actions/checkout@v3
+      if: always()
+      continue-on-error: true
+      with:
+        ref: gh-pages
+        path: gh-pages
+
+    - name: Allure Report Generation
+      uses: simple-elf/allure-report-action@v1.7
+      if: always()
+      with:
+        allure_results: allure-results
+        allure_history: allure-history
+
+    - name: Deploy report to Github Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v2
+      env:
+        PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: allure-history

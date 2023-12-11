@@ -1,0 +1,23 @@
+name: Manual trigger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: 'Pull Request Number'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Checkout repository
+        uses: actions/checkout@v2
